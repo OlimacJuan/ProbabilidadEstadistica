@@ -2,6 +2,17 @@ import numpy as np
 import pandas as pd
 from scipy.stats import t 
 
+def numero_datos(X: pd.DataFrame) -> int:
+    """
+    Obtiene el número de observaciones en los datos.
+
+    :param X: DataFrame con las variables independientes.
+    :type X: pd.DataFrame
+
+    :return: Número de observaciones.
+    :rtype: int
+    """
+    return len(X)
 
 def calcular_betas(X: pd.DataFrame, y: pd.Series, incluir_intercepto=True) -> np.ndarray:
     """
@@ -61,7 +72,7 @@ def calcular_varianza(X: pd.DataFrame, Y: pd.Series, betas: np.ndarray, incluir_
 
     # Si no se proporciona el número de observaciones (n), se calcula como el número de filas en X
     if n is None:
-        n = X_matrix.shape[0]
+        n = numero_datos(X)
 
     # Si no se proporciona el número de parámetros (p), se calcula como el número de columnas en X
     if p is None:
@@ -138,7 +149,7 @@ def prueba_significancia_individual(betas: np.ndarray, matriz_covarianza: np.nda
     return resultados
 
 
-def intervalo_prediccion(varianza: float, n: int, x_particular: pd.Series, betas: np.ndarray, X: pd.DataFrame, incluir_intercepto=True, p=None, nivel_significancia=0.05) -> np.ndarray:
+def intervalo_prediccion(varianza: float, x_particular: pd.Series, betas: np.ndarray, X: pd.DataFrame, incluir_intercepto=True, n=None, p=None, nivel_significancia=0.05) -> np.ndarray:
     """
     Calcula el intervalo de predicción para unos valores específicos.
 
@@ -163,6 +174,7 @@ def intervalo_prediccion(varianza: float, n: int, x_particular: pd.Series, betas
     
     # Convertir a matriz numpy
     X_matrix = X.to_numpy()
+    x_particular = x_particular.to_numpy().reshape(-1, 1)  # Asegurar que sea un vector columna
     
     # Agregar una columna de 1's a X si se desea incluir el intercepto en el modelo
     if incluir_intercepto:
@@ -172,11 +184,15 @@ def intervalo_prediccion(varianza: float, n: int, x_particular: pd.Series, betas
     if p is None:
         p = len(betas)
 
+    # Si no se proporciona el número de observaciones (n), se calcula como la longitud de X
+    if n is None:
+        n = numero_datos(X)
+
     # Calcular el valor crítico t basado en el nivel de significancia y los grados de libertad
     valor_critico = t.ppf(1 - nivel_significancia / 2, df=(n - p))
 
     # Calcular la desviacion estandar de la prediccion
-    desviacion_estandar = t.ppf(1 - nivel_significancia / 2, df=(n - p)) * np.sqrt(varianza * x_particular.T @ np.linalg.inv(X.T @ X) @ x_particular + varianza)
+    desviacion_estandar = t.ppf(1 - nivel_significancia / 2, df=(n - p)) * np.sqrt(varianza * x_particular.T @ np.linalg.inv(X_matrix.T @ X_matrix) @ x_particular + varianza)
 
     # Calcular los límites del intervalo de predicción
     limite_superior = (x_particular @ betas) + desviacion_estandar

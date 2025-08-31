@@ -3,7 +3,20 @@ import pandas as pd
 from scipy.stats import t 
 
 
-def calcular_betas(X: pd.Series, Y: pd.Series, incluir_intercepto=True) -> np.ndarray:
+def numero_datos(X: pd.Series) -> int:
+    """
+    Obtiene el número de observaciones en los datos.
+
+    :param X: Serie con la variable independiente.
+    :type X: pd.Series
+
+    :return: Número de observaciones.
+    :rtype: int
+    """
+    return len(X)
+
+
+def calcular_betas(X: pd.Series, Y: pd.Series, n=None, incluir_intercepto=True) -> np.ndarray:
     """
     Calcula los coeficientes beta de una regresión lineal simple.
 
@@ -11,6 +24,8 @@ def calcular_betas(X: pd.Series, Y: pd.Series, incluir_intercepto=True) -> np.nd
     :type X: pd.Series
     :param y: Serie con la variable dependiente.
     :type y: pd.Series
+    :param n: Número de observaciones.
+    :type n: int
     :param incluir_intercepto: Si True, incluye el intercepto en el modelo.
     :type incluir_intercepto: bool
 
@@ -20,8 +35,9 @@ def calcular_betas(X: pd.Series, Y: pd.Series, incluir_intercepto=True) -> np.nd
     # Calcula la suma del producto de X e Y
     suma_producto = sum(Y[i] * X[i] for i in range(len(X)))
     
-    # Obtiene el número de observaciones
-    n = len(X)
+    # Si no se proporciona el número de observaciones, se utiliza la longitud de X
+    if n is None:
+        n = numero_datos(X)
     
     # Calcula los promedios de X e Y
     x_promedio = X.mean()
@@ -56,8 +72,8 @@ def calcular_varianza(X: pd.Series, Y: pd.Series, estimacion: pd.Series, n=None)
     """
     # Si no se proporciona el número de observaciones, se utiliza la longitud de X
     if n is None:
-        n = len(X)
-        
+        n = numero_datos(X)
+
     # Calcula los residuales (diferencia entre los valores observados y estimados)
     residuales = Y - estimacion
     
@@ -92,7 +108,7 @@ def matriz_covarianza_betas(X: pd.DataFrame, varianza: float) -> np.ndarray:
     return matriz_covarianza
 
 
-def prueba_significancia_individual(betas: np.ndarray, matriz_covarianza: np.ndarray, n: int, nivel_significancia=0.05) -> pd.DataFrame:
+def prueba_significancia_individual(betas: np.ndarray, matriz_covarianza: np.ndarray, n:int, nivel_significancia=0.05) -> pd.DataFrame:
     """
     Realiza la prueba de significancia individual para cada coeficiente beta.
 
