@@ -1,0 +1,32 @@
+import numpy as np
+import pandas as pd
+
+
+def calcular_betas(X: pd.DataFrame, y: pd.Series, incluir_intercepto=True) -> np.ndarray:
+    """
+    Calcula los coeficientes beta de una regresión múltiple con OLS.
+
+    :param X: DataFrame con las variables independientes.
+    :type X: pd.DataFrame
+    :param y: Serie o DataFrame con la variable dependiente (n x 1).
+    :type y: pd.Series o pd.DataFrame
+    :param incluir_intercepto: Si True, agrega una columna de unos a X para estimar el intercepto.
+
+    :return: Vector de coeficientes estimados (p x 1).
+    :rtype: np.ndarray
+    """
+
+    # Convertir a matriz numpy
+    X_matrix = X.to_numpy()
+    y_vector = y.to_numpy().reshape(-1, 1)  # asegurar columna
+
+    # Agregar columna de 1's si se desea intercepto
+    if incluir_intercepto:
+        X_matrix = np.column_stack((np.ones(X_matrix.shape[0]), X_matrix))
+
+    # Fórmula de OLS: (X^T X)^(-1) X^T y
+    betas = np.linalg.inv(X_matrix.T @ X_matrix) @ X_matrix.T @ y_vector
+
+    return betas
+
+
