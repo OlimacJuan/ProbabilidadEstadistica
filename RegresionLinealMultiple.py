@@ -138,7 +138,7 @@ def prueba_significancia_individual(betas: np.ndarray, matriz_covarianza: np.nda
     return resultados
 
 
-def intervalo_prediccion(varianza: float, n: int, x_particular: pd.Series, betas: np.ndarray, X: pd.DataFrame, incluir_intercepto=True, p=None, nivel_significancia=0.05) -> tuple:
+def intervalo_prediccion(varianza: float, n: int, x_particular: pd.Series, betas: np.ndarray, X: pd.DataFrame, incluir_intercepto=True, p=None, nivel_significancia=0.05) -> np.ndarray:
     """
     Calcula el intervalo de predicción para unos valores específicos.
 
@@ -158,7 +158,7 @@ def intervalo_prediccion(varianza: float, n: int, x_particular: pd.Series, betas
     :type nivel_significancia: float
 
     :return: Intervalo de predicción (inferior, superior).
-    :rtype: tuple
+    :rtype: np.ndarray
     """
     
     # Convertir a matriz numpy
@@ -182,4 +182,4 @@ def intervalo_prediccion(varianza: float, n: int, x_particular: pd.Series, betas
     limite_superior = (x_particular @ betas) + desviacion_estandar
     limite_inferior = (x_particular @ betas) - desviacion_estandar
 
-    return limite_inferior, limite_superior
+    return np.array([limite_inferior, limite_superior])
