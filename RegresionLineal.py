@@ -68,3 +68,23 @@ def calcular_varianza(X: pd.DataFrame, y: pd.Series, betas: np.ndarray, incluir_
     varianza = (y_vector - X_matrix @ betas).T @ (y_vector - X_matrix @ betas) / (n - p)
 
     return varianza
+
+
+def matriz_covarianza_betas(X: pd.DataFrame, varianza: float) -> np.ndarray:
+    """
+    Calcula la matriz de covarianza de un DataFrame.
+
+    :param X: DataFrame con las variables.
+    :type X: pd.DataFrame
+    :param varianza: Varianza de la variable dependiente.
+    :type varianza: float
+
+    :return: Matriz de covarianza (p x p).
+    :rtype: np.ndarray
+    """
+    X_matrix = X.to_numpy()
+    
+    if varianza is None:
+        varianza = calcular_varianza(X, y, betas)
+    matriz_covarianza = varianza * np.linalg.inv(X_matrix.T @ X_matrix)
+    return matriz_covarianza
