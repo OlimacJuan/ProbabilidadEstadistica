@@ -91,9 +91,9 @@ def calcular_varianza(X: pd.DataFrame, Y: pd.Series, betas: pd.Series, incluir_i
     :return: varianza
     :rtype: float
     """
-    # Convertir el DataFrame X y la Serie y a matrices numpy
+    # Convertir el DataFrame X y betas a matrices numpy
     X_matrix = X.to_numpy()
-    Y_vector = Y.to_numpy().reshape(-1, 1)  # Asegurar que y sea un vector columna
+    betas = betas.to_numpy() 
 
     # Agregar una columna de 1's a X si se desea incluir el intercepto en el modelo
     if incluir_intercepto:
@@ -109,12 +109,13 @@ def calcular_varianza(X: pd.DataFrame, Y: pd.Series, betas: pd.Series, incluir_i
 
     # Calcular la varianza residual usando la fórmula:
     # varianza = (Y - X * betas)^T * (Y - X * betas) / (n - p)
-    varianza = (Y_vector - X_matrix @ betas).T @ (Y_vector - X_matrix @ betas) / (n - p)
+    sse = suma_cuadrada_error(Y, pd.Series(X_matrix @ betas))
+    varianza = media_cuadratica_error(sse, n, p)
 
     return varianza
 
 
-def matriz_covarianza_betas(X: pd.DataFrame, varianza: float) -> np.ndarray:
+def matriz_covarianza_betas(X: pd.DataFrame, varianza: float) -> pd.DataFrame:
     """
     Calcula la matriz de covarianza de un DataFrame.
 
@@ -134,24 +135,24 @@ def matriz_covarianza_betas(X: pd.DataFrame, varianza: float) -> np.ndarray:
     matriz_covarianza = varianza * np.linalg.inv(X_matrix.T @ X_matrix)
     
     # Retornar la matriz de covarianza calculada
-    return matriz_covarianza
+    return pd.DataFrame(matriz_covarianza)
 
 
-def prueba_significancia_individual(betas: np.ndarray, matriz_covarianza: np.ndarray, n: int, p=None, nivel_significancia=0.05) -> np.ndarray:
+def prueba_significancia_individual(betas: pd.Series, matriz_covarianza: pd.DataFrame, n: int, p=None, nivel_significancia=0.05) -> pd.DataFrame:
     """
     Realiza la prueba de significancia individual para cada coeficiente beta.
 
     :param betas: Coeficientes estimados del modelo (p x 1).
-    :type betas: np.ndarray
+    :type betas: pd.Series
     :param matriz_covarianza: Matriz de covarianza de los coeficientes (p x p).
-    :type matriz_covarianza: np.ndarray
+    :type matriz_covarianza: pd.DataFrame
     :param n: Número de observaciones.
     :type n: int
     :param nivel_significancia: Nivel de significancia para la prueba.
     :type nivel_significancia: float
 
     :return: Estadísticos t y p-valores para cada coeficiente.
-    :rtype: np.ndarray
+    :rtype: pd.DataFrame
     """
     # Crear un DataFrame para almacenar los resultados de la prueba
     resultados = pd.DataFrame(columns=["Estadístico de prueba", "Valor critico", "Rechazo H0"])
@@ -178,14 +179,14 @@ def prueba_significancia_individual(betas: np.ndarray, matriz_covarianza: np.nda
     return resultados
 
 
-def intervalo_confianza(varianza: float, x_particular: pd.Series, betas: np.ndarray, X: pd.DataFrame, incluir_intercepto=True, n=None, p=None, nivel_significancia=0.05) -> dict:
+def intervalo_confianza(varianza: float, x_particular: pd.Series, betas: pd.Series, X: pd.DataFrame, incluir_intercepto=True, n=None, p=None, nivel_significancia=0.05) -> dict:
     """
     Calcula el intervalo de confianza para los coeficientes beta.
 
     :param betas: Coeficientes del modelo (p x 1).
-    :type betas: np.ndarray
+    :type betas: pd.Series
     :param matriz_covarianza: Matriz de covarianza de los coeficientes (p x p).
-    :type matriz_covarianza: np.ndarray
+    :type matriz_covarianza: pd.DataFrame
     :param varianza: Varianza del modelo.
     :type varianza: float
     :param n: Número de observaciones.
@@ -196,12 +197,12 @@ def intervalo_confianza(varianza: float, x_particular: pd.Series, betas: np.ndar
     :type nivel_significancia: float
 
     :return: Intervalos de confianza para cada coeficiente (p x 2).
-    :rtype: np.ndarray
+    :rtype: pd.DataFrame
     """
-    
     # Convertir a matriz numpy
     X_matrix = X.to_numpy()
-    x_particular = x_particular.to_numpy().reshape(-1, 1)  # Asegurar que sea un vector columna
+    betas = betas.to_numpy()
+    x_particular = x_particular.to_numpy()
     
     # Agregar una columna de 1's a X si se desea incluir el intercepto en el modelo
     if incluir_intercepto:
@@ -228,16 +229,14 @@ def intervalo_confianza(varianza: float, x_particular: pd.Series, betas: np.ndar
     return {'Limite Inferior': limite_inferior, 'Limite Superior': limite_superior}
 
 
-def intervalo_prediccion(varianza: float, x_particular: pd.Series, betas: np.ndarray, X: pd.DataFrame, incluir_intercepto=True, n=None, p=None, nivel_significancia=0.05) -> dict:
+def intervalo_prediccion(varianza: float, x_particular: pd.Series, betas: pd.Series, X: pd.DataFrame, incluir_intercepto=True, n=None, p=None, nivel_significancia=0.05) -> dict:
     """
     Calcula el intervalo de predicción para unos valores específicos.
 
     :param x_particular: Valores de las características para el nuevo punto.
     :type x_particular: pd.Series
     :param betas: Coeficientes del modelo (p x 1).
-    :type betas: np.ndarray
-    :param matriz_covarianza: Matriz de covarianza de los coeficientes (p x p).
-    :type matriz_covarianza: np.ndarray
+    :type betas: pd.Series
     :param varianza: Varianza del modelo.
     :type varianza: float
     :param n: Número de observaciones.
@@ -325,27 +324,27 @@ def suma_cuadrada_total(Y: pd.Series, promedio: float) -> float:
     return np.sum((Y - promedio) ** 2)
 
 
-def media_cuadratica_regresion(SSR: float, k: int) -> float:
+def media_cuadratica_regresion(ssr: float, k: int) -> float:
     """
     Calcula la media cuadrática de la regresión.
 
-    :param SSR: Suma de cuadrados de la regresión.
-    :type SSR: float
+    :param ssr: Suma de cuadrados de la regresión.
+    :type ssr: float
     :param k: Número de variables independientes en el modelo.
     :type k: int
 
     :return: Media cuadrática de la regresión.
     :rtype: float
     """
-    return SSR / k
+    return ssr / k
 
 
-def media_cuadratica_error(SSE: float, n: int, p: int) -> float:
+def media_cuadratica_error(sse: float, n: int, p: int) -> float:
     """
     Calcula la media cuadrática del error.
 
-    :param SSE: Suma de cuadrados del error.
-    :type SSE: float
+    :param sse: Suma de cuadrados del error.
+    :type sse: float
     :param n: Número de observaciones.
     :type n: int
     :param p: Número de parámetros en el modelo (incluyendo el intercepto).
@@ -354,32 +353,38 @@ def media_cuadratica_error(SSE: float, n: int, p: int) -> float:
     :return: Media cuadrática del error.
     :rtype: float
     """
-    return SSE / (n - p)
+    return sse / (n - p)
 
 
-def media_cuadratica_total(SST: float, n: int) -> float:
+def media_cuadratica_total(sst: float, n: int) -> float:
     """
     Calcula la media cuadrática total.
 
-    :param SST: Suma de cuadrados total.
-    :type SST: float
+    :param sst: Suma de cuadrados total.
+    :type sst: float
     :param n: Número de observaciones.
     :type n: int
 
     :return: Media cuadrática total.
     :rtype: float
     """
-    return SST / (n - 1)
+    return sst / (n - 1)
 
 
-def prueba_significancia_global(MSR: float, MSE: float, nivel_significancia=0.05) -> dict:
+def prueba_significancia_global(msr: float, mse: float, k: int, n: int, p:int, nivel_significancia=0.05) -> dict:
     """
     Realiza la prueba de significancia global del modelo de regresión.
 
-    :param MSR: Media cuadrática de la regresión.
-    :type MSR: float
-    :param MSE: Media cuadrática del error.
-    :type MSE: float
+    :param msr: Media cuadrática de la regresión.
+    :type msr: float
+    :param mse: Media cuadrática del error.
+    :type mse: float
+    :param k: Número de variables independientes en el modelo.
+    :type k: int
+    :param n: Número de observaciones.
+    :type n: int
+    :param p: Número de parámetros en el modelo (incluyendo el intercepto).
+    :type p: int
     :param nivel_significancia: Nivel de significancia para la prueba.
     :type nivel_significancia: float
 
@@ -387,18 +392,68 @@ def prueba_significancia_global(MSR: float, MSE: float, nivel_significancia=0.05
     :rtype: dict
     """
     # Crear un DataFrame para almacenar los resultados de la prueba
-    resultados = pd.DataFrame(columns=["Estadístico de prueba", "Valor critico", "Rechazo H0"])
-    
-    # Calcular el estadístico F
-    estadistico_F = MSR / MSE
+    resultados = pd.DataFrame(columns=["Estadístico de prueba", "Valor critico", "Rechazo H0", "P-Value"])
+    # Calcular el estadístico de prueba
+    estadistico_prueba = msr / mse
 
     # Calcular el valor crítico F basado en el nivel de significancia y los grados de libertad
     # Grados de libertad del numerador (k) y del denominador (n - p)
-    valor_critico = f.ppf(1 - nivel_significancia, dfn=1, dfd=1)  # Placeholder, se deben proporcionar dfn y dfd correctos
+    valor_critico = f.ppf(1 - nivel_significancia, dfn=k, dfd=n - p)
 
     # Determinar si se rechaza la hipótesis nula (H0)
-    rechazo_h0 = estadistico_F > valor_critico
+    rechazo_h0 = estadistico_prueba > valor_critico
+
+    # Calcular el p-valor asociado al estadístico F
+    p_value = 1 - f.cdf(estadistico_prueba, dfn=k, dfd=n - p)
 
     # Almacenar los resultados en el DataFrame
-    resultados.loc[0] = [estadistico_F, valor_critico, rechazo_h0]
+    resultados.loc[0] = [estadistico_prueba, valor_critico, rechazo_h0, p_value]
+    return resultados
+
+
+def prueba_significancia_parcial(modelo_reducido:pd.Series, promedio: float, k_reducido:int, n:int, p:int, mse: float, nivel_significancia=0.05) -> pd.DataFrame:
+    """
+    Realiza la prueba de significancia parcial del modelo de regresión.
+
+    :param modelo_reducido: Valores predichos del modelo reducido.
+    :type modelo_reducido: pd.Series
+    :param promedio: Promedio de los valores reales de la variable dependiente.
+    :type promedio: float
+    :param k_reducido: Número de variables independientes en el modelo reducido.
+    :type k_reducido: int
+    :param n: Número de observaciones.
+    :type n: int
+    :param p: Número de parámetros en el modelo completo (incluyendo el intercepto).
+    :type p: int
+    :param mse: Media cuadrática del error del modelo completo.
+    :type mse: float
+    :param nivel_significancia: Nivel de significancia para la prueba.
+    :type nivel_significancia: float
+
+    :return: Estadístico F, valor crítico, si se rechaza H0 y p-valor.
+    :rtype: pd.DataFrame
+    """
+    resultados = pd.DataFrame(columns=["Estadístico de Prueba", "Valor critico", "Rechazo H0", "P-Value"])
+    
+    # Calcular la suma de cuadrados de la regresión del modelo reducido
+    ssr_reducido = suma_cuadrada_regresion(modelo_reducido, promedio)
+    
+    # Calcular la media cuadrática de la regresión del modelo reducido
+    msr_reducido = media_cuadratica_regresion(ssr_reducido, k_reducido)
+    
+    # Calcular el estadistico de prueba
+    estadistico_prueba = msr_reducido / mse
+    
+    # Calcular el valor critico F basado en el nivel de significancia y los grados de libertad
+    valor_critico = f.ppf(1 - nivel_significancia, dfn=k_reducido, dfd=n - p)
+    
+    # Determinar si se rechaza la hipótesis nula (H0)
+    rechazo_h0 = estadistico_prueba > valor_critico
+    
+    # Calcular el p-valor asociado al estadístico F
+    p_value = 1 - f.cdf(estadistico_prueba, dfn=k_reducido, dfd=n - p)
+    
+    # Almacenar los resultados en el DataFrame
+    resultados.loc[0] = [estadistico_prueba, valor_critico, rechazo_h0, p_value]
+    
     return resultados
