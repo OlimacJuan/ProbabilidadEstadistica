@@ -27,6 +27,18 @@ def numero_parametros(X: pd.DataFrame, incluir_intercepto=True) -> int:
     """
     return len(X.columns) + (1 if incluir_intercepto else 0)
 
+def numero_variables(X: pd.DataFrame) -> int:
+    """
+    Obtiene el número de variables independientes en los datos.
+
+    :param X: DataFrame con las variables independientes.
+    :type X: pd.DataFrame
+
+    :return: Número de variables independientes.
+    :rtype: int
+    """
+    return len(X.columns)
+
 def calcular_betas(X: pd.DataFrame, y: pd.Series, incluir_intercepto=True) -> pd.Series:
     """
     Calcula los coeficientes beta de una regresión múltiple con OLS.
