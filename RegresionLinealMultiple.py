@@ -310,6 +310,21 @@ def suma_cuadrada_error(Y: pd.Series, Y_pred: pd.Series) -> float:
     return np.sum((Y - Y_pred) ** 2)
 
 
+def suma_cuadrada_total(Y: pd.Series, promedio: float) -> float:
+    """
+    Calcula la suma de cuadrados total.
+
+    :param Y: Valores reales de la variable dependiente.
+    :type Y: pd.Series
+    :param promedio: Promedio de los valores reales de la variable dependiente.
+    :type promedio: float
+
+    :return: Suma de cuadrados total.
+    :rtype: float
+    """
+    return np.sum((Y - promedio) ** 2)
+
+
 def media_cuadratica_regresion(SSR: float, k: int) -> float:
     """
     Calcula la media cuadrática de la regresión.
@@ -340,6 +355,21 @@ def media_cuadratica_error(SSE: float, n: int, p: int) -> float:
     :rtype: float
     """
     return SSE / (n - p)
+
+
+def media_cuadratica_total(SST: float, n: int) -> float:
+    """
+    Calcula la media cuadrática total.
+
+    :param SST: Suma de cuadrados total.
+    :type SST: float
+    :param n: Número de observaciones.
+    :type n: int
+
+    :return: Media cuadrática total.
+    :rtype: float
+    """
+    return SST / (n - 1)
 
 
 def prueba_significancia_global(varianza: float, Y: pd.Series, betas: np.ndarray, X: pd.DataFrame, incluir_intercepto=True, n=None, p=None, nivel_significancia=0.05) -> dict:
