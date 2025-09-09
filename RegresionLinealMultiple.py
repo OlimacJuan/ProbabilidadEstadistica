@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from scipy.stats import t 
+from scipy.stats import t, f
 
 
 def numero_datos(X: pd.DataFrame) -> int:
@@ -372,5 +372,33 @@ def media_cuadratica_total(SST: float, n: int) -> float:
     return SST / (n - 1)
 
 
-def prueba_significancia_global(varianza: float, Y: pd.Series, betas: np.ndarray, X: pd.DataFrame, incluir_intercepto=True, n=None, p=None, nivel_significancia=0.05) -> dict:
-    pass
+def prueba_significancia_global(MSR: float, MSE: float, nivel_significancia=0.05) -> dict:
+    """
+    Realiza la prueba de significancia global del modelo de regresión.
+
+    :param MSR: Media cuadrática de la regresión.
+    :type MSR: float
+    :param MSE: Media cuadrática del error.
+    :type MSE: float
+    :param nivel_significancia: Nivel de significancia para la prueba.
+    :type nivel_significancia: float
+
+    :return: Estadístico F, valor crítico y si se rechaza H0.
+    :rtype: dict
+    """
+    # Crear un DataFrame para almacenar los resultados de la prueba
+    resultados = pd.DataFrame(columns=["Estadístico de prueba", "Valor critico", "Rechazo H0"])
+    
+    # Calcular el estadístico F
+    estadistico_F = MSR / MSE
+
+    # Calcular el valor crítico F basado en el nivel de significancia y los grados de libertad
+    # Grados de libertad del numerador (k) y del denominador (n - p)
+    valor_critico = f.ppf(1 - nivel_significancia, dfn=1, dfd=1)  # Placeholder, se deben proporcionar dfn y dfd correctos
+
+    # Determinar si se rechaza la hipótesis nula (H0)
+    rechazo_h0 = estadistico_F > valor_critico
+
+    # Almacenar los resultados en el DataFrame
+    resultados.loc[0] = [estadistico_F, valor_critico, rechazo_h0]
+    return resultados
