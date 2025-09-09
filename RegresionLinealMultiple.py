@@ -310,5 +310,37 @@ def suma_cuadrada_error(Y: pd.Series, Y_pred: pd.Series) -> float:
     return np.sum((Y - Y_pred) ** 2)
 
 
+def media_cuadratica_regresion(SSR: float, k: int) -> float:
+    """
+    Calcula la media cuadrática de la regresión.
+
+    :param SSR: Suma de cuadrados de la regresión.
+    :type SSR: float
+    :param k: Número de variables independientes en el modelo.
+    :type k: int
+
+    :return: Media cuadrática de la regresión.
+    :rtype: float
+    """
+    return SSR / k
+
+
+def media_cuadratica_error(SSE: float, n: int, p: int) -> float:
+    """
+    Calcula la media cuadrática del error.
+
+    :param SSE: Suma de cuadrados del error.
+    :type SSE: float
+    :param n: Número de observaciones.
+    :type n: int
+    :param p: Número de parámetros en el modelo (incluyendo el intercepto).
+    :type p: int
+
+    :return: Media cuadrática del error.
+    :rtype: float
+    """
+    return SSE / (n - p)
+
+
 def prueba_significancia_global(varianza: float, Y: pd.Series, betas: np.ndarray, X: pd.DataFrame, incluir_intercepto=True, n=None, p=None, nivel_significancia=0.05) -> dict:
     pass
