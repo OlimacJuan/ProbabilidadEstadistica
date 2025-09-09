@@ -14,7 +14,20 @@ def numero_datos(X: pd.DataFrame) -> int:
     """
     return len(X)
 
-def calcular_betas(X: pd.DataFrame, y: pd.Series, incluir_intercepto=True) -> np.ndarray:
+def numero_parametros(X: pd.DataFrame, incluir_intercepto=True) -> int:
+    """
+    Obtiene el número de parámetros en el modelo.
+
+    :param X: DataFrame con las variables independientes.
+    :type X: pd.DataFrame
+    :param incluir_intercepto: Si True, agrega 1 al conteo para el intercepto.
+
+    :return: Número de parámetros.
+    :rtype: int
+    """
+    return len(X.columns) + (1 if incluir_intercepto else 0)
+
+def calcular_betas(X: pd.DataFrame, y: pd.Series, incluir_intercepto=True) -> pd.Series:
     """
     Calcula los coeficientes beta de una regresión múltiple con OLS.
 
@@ -25,7 +38,7 @@ def calcular_betas(X: pd.DataFrame, y: pd.Series, incluir_intercepto=True) -> np
     :param incluir_intercepto: Si True, agrega una columna de unos a X para estimar el intercepto.
 
     :return: Vector de coeficientes estimados (p x 1).
-    :rtype: np.ndarray
+    :rtype: pd.Series
     """
 
     # Convertir a matriz numpy
@@ -38,11 +51,11 @@ def calcular_betas(X: pd.DataFrame, y: pd.Series, incluir_intercepto=True) -> np
 
     # Fórmula de OLS: (X^T X)^(-1) X^T y
     betas = np.linalg.inv(X_matrix.T @ X_matrix) @ X_matrix.T @ y_vector
+    
+    return pd.Series(betas.flatten())
 
-    return betas
 
-
-def calcular_varianza(X: pd.DataFrame, Y: pd.Series, betas: np.ndarray, incluir_intercepto=True, n=None, p=None) -> float:
+def calcular_varianza(X: pd.DataFrame, Y: pd.Series, betas: pd.Series, incluir_intercepto=True, n=None, p=None) -> float:
     """
     Calcula la varianza explicada y la varianza residual de un modelo de regresión.
 
@@ -76,7 +89,7 @@ def calcular_varianza(X: pd.DataFrame, Y: pd.Series, betas: np.ndarray, incluir_
 
     # Si no se proporciona el número de parámetros (p), se calcula como el número de columnas en X
     if p is None:
-        p = X_matrix.shape[1]
+        p = numero_parametros(X, incluir_intercepto)
 
     # Calcular la varianza residual usando la fórmula:
     # varianza = (Y - X * betas)^T * (Y - X * betas) / (n - p)
