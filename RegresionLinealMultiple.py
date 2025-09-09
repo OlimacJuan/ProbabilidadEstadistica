@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import t 
 
+
 def numero_datos(X: pd.DataFrame) -> int:
     """
     Obtiene el número de observaciones en los datos.
@@ -13,6 +14,7 @@ def numero_datos(X: pd.DataFrame) -> int:
     :rtype: int
     """
     return len(X)
+
 
 def numero_parametros(X: pd.DataFrame, incluir_intercepto=True) -> int:
     """
@@ -27,6 +29,7 @@ def numero_parametros(X: pd.DataFrame, incluir_intercepto=True) -> int:
     """
     return len(X.columns) + (1 if incluir_intercepto else 0)
 
+
 def numero_variables(X: pd.DataFrame) -> int:
     """
     Obtiene el número de variables independientes en los datos.
@@ -38,6 +41,7 @@ def numero_variables(X: pd.DataFrame) -> int:
     :rtype: int
     """
     return len(X.columns)
+
 
 def calcular_betas(X: pd.DataFrame, y: pd.Series, incluir_intercepto=True) -> pd.Series:
     """
@@ -64,7 +68,7 @@ def calcular_betas(X: pd.DataFrame, y: pd.Series, incluir_intercepto=True) -> pd
     # Fórmula de OLS: (X^T X)^(-1) X^T y
     betas = np.linalg.inv(X_matrix.T @ X_matrix) @ X_matrix.T @ y_vector
     
-    return pd.Series(betas.flatten())
+    return pd.Series(betas)
 
 
 def calcular_varianza(X: pd.DataFrame, Y: pd.Series, betas: pd.Series, incluir_intercepto=True, n=None, p=None) -> float:
@@ -174,12 +178,10 @@ def prueba_significancia_individual(betas: np.ndarray, matriz_covarianza: np.nda
     return resultados
 
 
-def intervalo_prediccion(varianza: float, x_particular: pd.Series, betas: np.ndarray, X: pd.DataFrame, incluir_intercepto=True, n=None, p=None, nivel_significancia=0.05) -> np.ndarray:
+def intervalo_confianza(varianza: float, x_particular: pd.Series, betas: np.ndarray, X: pd.DataFrame, incluir_intercepto=True, n=None, p=None, nivel_significancia=0.05) -> dict:
     """
-    Calcula el intervalo de predicción para unos valores específicos.
+    Calcula el intervalo de confianza para los coeficientes beta.
 
-    :param x_particular: Valores de las características para el nuevo punto.
-    :type x_particular: pd.Series
     :param betas: Coeficientes del modelo (p x 1).
     :type betas: np.ndarray
     :param matriz_covarianza: Matriz de covarianza de los coeficientes (p x p).
@@ -193,7 +195,7 @@ def intervalo_prediccion(varianza: float, x_particular: pd.Series, betas: np.nda
     :param nivel_significancia: Nivel de significancia para el intervalo de confianza.
     :type nivel_significancia: float
 
-    :return: Intervalo de predicción (inferior, superior).
+    :return: Intervalos de confianza para cada coeficiente (p x 2).
     :rtype: np.ndarray
     """
     
@@ -217,10 +219,62 @@ def intervalo_prediccion(varianza: float, x_particular: pd.Series, betas: np.nda
     valor_critico = t.ppf(1 - nivel_significancia / 2, df=(n - p))
 
     # Calcular la desviacion estandar de la prediccion
-    desviacion_estandar = t.ppf(1 - nivel_significancia / 2, df=(n - p)) * np.sqrt(varianza * x_particular.T @ np.linalg.inv(X_matrix.T @ X_matrix) @ x_particular + varianza)
+    desviacion_estandar = valor_critico * np.sqrt(varianza * x_particular.T @ np.linalg.inv(X_matrix.T @ X_matrix) @ x_particular)
 
     # Calcular los límites del intervalo de predicción
     limite_superior = (x_particular @ betas) + desviacion_estandar
     limite_inferior = (x_particular @ betas) - desviacion_estandar
 
-    return np.array([limite_inferior, limite_superior])
+    return {'Limite Inferior': limite_inferior, 'Limite Superior': limite_superior}
+
+
+def intervalo_prediccion(varianza: float, x_particular: pd.Series, betas: np.ndarray, X: pd.DataFrame, incluir_intercepto=True, n=None, p=None, nivel_significancia=0.05) -> dict:
+    """
+    Calcula el intervalo de predicción para unos valores específicos.
+
+    :param x_particular: Valores de las características para el nuevo punto.
+    :type x_particular: pd.Series
+    :param betas: Coeficientes del modelo (p x 1).
+    :type betas: np.ndarray
+    :param matriz_covarianza: Matriz de covarianza de los coeficientes (p x p).
+    :type matriz_covarianza: np.ndarray
+    :param varianza: Varianza del modelo.
+    :type varianza: float
+    :param n: Número de observaciones.
+    :type n: int
+    :param p: Número de parámetros (incluyendo el intercepto).
+    :type p: int
+    :param nivel_significancia: Nivel de significancia para el intervalo de confianza.
+    :type nivel_significancia: float
+
+    :return: Intervalo de predicción.
+    :rtype: dict
+    """
+    
+    # Convertir a matriz numpy
+    X_matrix = X.to_numpy()
+    x_particular = x_particular.to_numpy().reshape(-1, 1)  # Asegurar que sea un vector columna
+    
+    # Agregar una columna de 1's a X si se desea incluir el intercepto en el modelo
+    if incluir_intercepto:
+        X_matrix = np.column_stack((np.ones(X_matrix.shape[0]), X_matrix))
+    
+    # Si no se proporciona el número de parámetros (p), se calcula como la longitud de los coeficientes beta
+    if p is None:
+        p = len(betas)
+
+    # Si no se proporciona el número de observaciones (n), se calcula como la longitud de X
+    if n is None:
+        n = numero_datos(X)
+
+    # Calcular el valor crítico t basado en el nivel de significancia y los grados de libertad
+    valor_critico = t.ppf(1 - nivel_significancia / 2, df=(n - p))
+
+    # Calcular la desviacion estandar de la prediccion
+    desviacion_estandar = valor_critico * np.sqrt(varianza * x_particular.T @ np.linalg.inv(X_matrix.T @ X_matrix) @ x_particular + varianza)
+
+    # Calcular los límites del intervalo de predicción
+    limite_superior = (x_particular @ betas) + desviacion_estandar
+    limite_inferior = (x_particular @ betas) - desviacion_estandar
+
+    return {'Limite Inferior': limite_inferior, 'Limite Superior': limite_superior}
