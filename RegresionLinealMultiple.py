@@ -278,3 +278,37 @@ def intervalo_prediccion(varianza: float, x_particular: pd.Series, betas: np.nda
     limite_inferior = (x_particular @ betas) - desviacion_estandar
 
     return {'Limite Inferior': limite_inferior, 'Limite Superior': limite_superior}
+
+
+def suma_cuadrada_regresion(Y_pred: pd.Series, promedio: float) -> float:
+    """
+    Calcula la suma de cuadrados de la regresión.
+
+    :param Y: Valores estimados de la variable dependiente.
+    :type Y: pd.Series
+    :param promedio: Promedio de los valores reales de la variable dependiente.
+    :type promedio: float
+
+    :return: Suma de cuadrados de la regresión.
+    :rtype: float
+    """
+    return np.sum((Y_pred - promedio) ** 2)
+
+
+def suma_cuadrada_error(Y: pd.Series, Y_pred: pd.Series) -> float:
+    """
+    Calcula la suma de cuadrados del error.
+
+    :param Y: Valores reales de la variable dependiente.
+    :type Y: pd.Series
+    :param Y_pred: Valores predichos de la variable dependiente.
+    :type Y_pred: pd.Series
+
+    :return: Suma de cuadrados del error.
+    :rtype: float
+    """
+    return np.sum((Y - Y_pred) ** 2)
+
+
+def prueba_significancia_global(varianza: float, Y: pd.Series, betas: np.ndarray, X: pd.DataFrame, incluir_intercepto=True, n=None, p=None, nivel_significancia=0.05) -> dict:
+    pass
