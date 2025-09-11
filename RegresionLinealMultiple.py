@@ -125,7 +125,7 @@ def matriz_covarianza_betas(X: pd.DataFrame, varianza: float) -> pd.DataFrame:
     :type varianza: float
 
     :return: Matriz de covarianza (p x p).
-    :rtype: np.ndarray
+    :rtype: pd.DataFrame
     """
     # Convertir el DataFrame X a una matriz numpy
     X_matrix = X.to_numpy()
@@ -155,14 +155,14 @@ def prueba_significancia_individual(betas: pd.Series, matriz_covarianza: pd.Data
     :rtype: pd.DataFrame
     """
     # Crear un DataFrame para almacenar los resultados de la prueba
-    resultados = pd.DataFrame(columns=["Estadístico de prueba", "Valor critico", "Rechazo H0"])
+    resultados = pd.DataFrame(columns=["Estadístico de prueba", "Valor critico", "Rechazo H0", "P-Value", "Nivel de significancia"])
     
     # Si no se proporciona el número de parámetros (p), se calcula como la longitud de los coeficientes beta
     if p is None:
         p = len(betas)
     
     # Calcular el valor crítico t basado en el nivel de significancia y los grados de libertad
-    valor_critico = t.ppf(1 - nivel_significancia / 2, df=(n - p))
+    valor_critico = t.ppf(1 - nivel_significancia / 2, df=(n - p)) # Es lo mismo que una distribucion F con 1 y n-p grados de libertad
 
     # Iterar sobre cada coeficiente beta para realizar la prueba de significancia
     for j in range(len(betas)):
@@ -171,9 +171,12 @@ def prueba_significancia_individual(betas: pd.Series, matriz_covarianza: pd.Data
         
         # Determinar si se rechaza la hipótesis nula (H0) para el coeficiente beta j
         rechazo_h0 = abs(estadistico_prueba) > valor_critico
+        
+        # Calcular el p-valor asociado al estadístico t
+        p_value = 2 * (1 - t.cdf(abs(estadistico_prueba), df=(n - p)))
 
         # Almacenar los resultados en el DataFrame
-        resultados.loc[j] = [estadistico_prueba, valor_critico, rechazo_h0]
+        resultados.loc[j] = [estadistico_prueba, valor_critico, rechazo_h0, p_value, nivel_significancia]
 
     # Retornar el DataFrame con los resultados de la prueba
     return resultados
@@ -219,12 +222,12 @@ def intervalo_confianza(varianza: float, x_particular: pd.Series, betas: pd.Seri
     # Calcular el valor crítico t basado en el nivel de significancia y los grados de libertad
     valor_critico = t.ppf(1 - nivel_significancia / 2, df=(n - p))
 
-    # Calcular la desviacion estandar de la prediccion
-    desviacion_estandar = valor_critico * np.sqrt(varianza * x_particular.T @ np.linalg.inv(X_matrix.T @ X_matrix) @ x_particular)
+    # Calcular el margen de error para el intervalo de predicción
+    margen_error = valor_critico * np.sqrt(varianza * x_particular.T @ np.linalg.inv(X_matrix.T @ X_matrix) @ x_particular)
 
     # Calcular los límites del intervalo de predicción
-    limite_superior = (x_particular @ betas) + desviacion_estandar
-    limite_inferior = (x_particular @ betas) - desviacion_estandar
+    limite_superior = (x_particular @ betas) + margen_error
+    limite_inferior = (x_particular @ betas) - margen_error
 
     return {'Limite Inferior': limite_inferior, 'Limite Superior': limite_superior}
 
@@ -269,12 +272,12 @@ def intervalo_prediccion(varianza: float, x_particular: pd.Series, betas: pd.Ser
     # Calcular el valor crítico t basado en el nivel de significancia y los grados de libertad
     valor_critico = t.ppf(1 - nivel_significancia / 2, df=(n - p))
 
-    # Calcular la desviacion estandar de la prediccion
-    desviacion_estandar = valor_critico * np.sqrt(varianza * x_particular.T @ np.linalg.inv(X_matrix.T @ X_matrix) @ x_particular + varianza)
+    # Calcular el margen de error para el intervalo de predicción
+    margen_error = valor_critico * np.sqrt(varianza * x_particular.T @ np.linalg.inv(X_matrix.T @ X_matrix) @ x_particular + varianza)
 
     # Calcular los límites del intervalo de predicción
-    limite_superior = (x_particular @ betas) + desviacion_estandar
-    limite_inferior = (x_particular @ betas) - desviacion_estandar
+    limite_superior = (x_particular @ betas) + margen_error
+    limite_inferior = (x_particular @ betas) - margen_error
 
     return {'Limite Inferior': limite_inferior, 'Limite Superior': limite_superior}
 
@@ -371,7 +374,7 @@ def media_cuadratica_total(sst: float, n: int) -> float:
     return sst / (n - 1)
 
 
-def prueba_significancia_global(msr: float, mse: float, k: int, n: int, p:int, nivel_significancia=0.05) -> dict:
+def prueba_significancia_global(msr: float, mse: float, k: int, n: int, p:int, nivel_significancia=0.05) -> pd.DataFrame:
     """
     Realiza la prueba de significancia global del modelo de regresión.
 
@@ -389,10 +392,10 @@ def prueba_significancia_global(msr: float, mse: float, k: int, n: int, p:int, n
     :type nivel_significancia: float
 
     :return: Estadístico F, valor crítico y si se rechaza H0.
-    :rtype: dict
+    :rtype: pd.DataFrame
     """
     # Crear un DataFrame para almacenar los resultados de la prueba
-    resultados = pd.DataFrame(columns=["Estadístico de prueba", "Valor critico", "Rechazo H0", "P-Value"])
+    resultados = pd.DataFrame(columns=["Estadístico de prueba", "Valor critico", "Rechazo H0", "P-Value", "Nivel de significancia"])
     # Calcular el estadístico de prueba
     estadistico_prueba = msr / mse
 
@@ -407,7 +410,7 @@ def prueba_significancia_global(msr: float, mse: float, k: int, n: int, p:int, n
     p_value = 1 - f.cdf(estadistico_prueba, dfn=k, dfd=n - p)
 
     # Almacenar los resultados en el DataFrame
-    resultados.loc[0] = [estadistico_prueba, valor_critico, rechazo_h0, p_value]
+    resultados.loc[0] = [estadistico_prueba, valor_critico, rechazo_h0, p_value, nivel_significancia]
     return resultados
 
 
@@ -433,7 +436,7 @@ def prueba_significancia_parcial(modelo_reducido:pd.Series, promedio: float, k_r
     :return: Estadístico F, valor crítico, si se rechaza H0 y p-valor.
     :rtype: pd.DataFrame
     """
-    resultados = pd.DataFrame(columns=["Estadístico de Prueba", "Valor critico", "Rechazo H0", "P-Value"])
+    resultados = pd.DataFrame(columns=["Estadístico de Prueba", "Valor critico", "Rechazo H0", "P-Value", "Nivel de significancia"])
     
     # Calcular la suma de cuadrados de la regresión del modelo reducido
     ssr_reducido = suma_cuadrada_regresion(modelo_reducido, promedio)
@@ -454,6 +457,6 @@ def prueba_significancia_parcial(modelo_reducido:pd.Series, promedio: float, k_r
     p_value = 1 - f.cdf(estadistico_prueba, dfn=k_reducido, dfd=n - p)
     
     # Almacenar los resultados en el DataFrame
-    resultados.loc[0] = [estadistico_prueba, valor_critico, rechazo_h0, p_value]
-    
+    resultados.loc[0] = [estadistico_prueba, valor_critico, rechazo_h0, p_value, nivel_significancia]
+
     return resultados
