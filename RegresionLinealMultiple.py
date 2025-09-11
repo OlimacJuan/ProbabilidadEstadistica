@@ -56,7 +56,6 @@ def calcular_betas(X: pd.DataFrame, y: pd.Series, incluir_intercepto=True) -> pd
     :return: Vector de coeficientes estimados (p x 1).
     :rtype: pd.Series
     """
-
     # Convertir a matriz numpy
     X_matrix = X.to_numpy()
     y_vector = y.to_numpy().reshape(-1, 1)  # asegurar columna
@@ -411,7 +410,42 @@ def prueba_significancia_global(msr: float, mse: float, k: int, n: int, p:int, n
 
     # Almacenar los resultados en el DataFrame
     resultados.loc[0] = [estadistico_prueba, valor_critico, rechazo_h0, p_value, nivel_significancia]
-    return resultados
+    r
+
+
+def anova(msr: float, mse: float, mst: float, k: int, n: int, p:int) -> pd.DataFrame:
+    """
+    Realiza el análisis de varianza (ANOVA) para un modelo de regresión.
+
+    :param msr: Media cuadrática de la regresión.
+    :type msr: float
+    :param mse: Media cuadrática del error.
+    :type mse: float
+    :param mst: Media cuadrática total.
+    :type mst: float
+    :param k: Número de variables independientes en el modelo.
+    :type k: int
+    :param n: Número de observaciones.
+    :type n: int
+    :param p: Número de parámetros en el modelo (incluyendo el intercepto).
+    :type p: int
+
+    :return: Tabla ANOVA con fuentes de variación, sumas de cuadrados, grados de libertad, medias cuadráticas y estadísticos F.
+    :rtype: pd.DataFrame
+    """
+    # Crear un DataFrame para la tabla ANOVA
+    anova_table = pd.DataFrame(columns=["Fuente de Variación", "Suma de Cuadrados", "Grados de Libertad", "Media Cuadrática", "Estadístico F"])
+
+    # Fuente de variación: Regresión
+    anova_table.loc[0] = ["Regresión", msr * k, k, msr, msr / mse]
+
+    # Fuente de variación: Error
+    anova_table.loc[1] = ["Error", mse * (n - p), n - p, mse, np.nan]
+
+    # Fuente de variación: Total
+    anova_table.loc[2] = ["Total", mst * (n - 1), n - 1, mst, np.nan]
+
+    return anova_table
 
 
 def prueba_significancia_parcial(modelo_reducido:pd.Series, promedio: float, k_reducido:int, n:int, p:int, mse: float, nivel_significancia=0.05) -> pd.DataFrame:
