@@ -410,7 +410,7 @@ def prueba_significancia_global(msr: float, mse: float, k: int, n: int, p:int, n
 
     # Almacenar los resultados en el DataFrame
     resultados.loc[0] = [estadistico_prueba, valor_critico, rechazo_h0, p_value, nivel_significancia]
-    r
+    return resultados
 
 
 def anova(msr: float, mse: float, mst: float, k: int, n: int, p:int) -> pd.DataFrame:
