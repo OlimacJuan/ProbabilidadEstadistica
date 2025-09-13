@@ -43,9 +43,55 @@ def numero_variables(X: pd.DataFrame) -> int:
     return len(X.columns)
 
 
-def calcular_betas(X: pd.DataFrame, y: pd.Series, incluir_intercepto=True) -> pd.Series:
+def codificar_variables_categoricas(X: pd.DataFrame) -> pd.DataFrame:
     """
-    Calcula los coeficientes beta de una regresión múltiple con OLS.
+    Codifica las variables categóricas en la matriz X utilizando codificación one-hot
+    y agrega interacciones entre las variables categóricas y las variables explicativas.
+
+    :param X: DataFrame con las variables independientes.
+    :type X: pd.DataFrame
+
+    :return: DataFrame con las variables categóricas codificadas y las interacciones.
+    :rtype: pd.DataFrame
+    """
+    # Verificar si hay variables categóricas
+    # Si no hay columnas categóricas, se retorna el DataFrame original
+    if X.select_dtypes(include=['object', 'category']).empty:
+        return X
+
+    # Identificar las columnas categóricas en el DataFrame
+    columnas_categoricas = X.select_dtypes(include=['object', 'category']).columns
+
+    # Codificar las variables categóricas utilizando one-hot encoding
+    # Esto crea nuevas columnas binarias para cada categoría
+    X_codificado = pd.get_dummies(X, columns=columnas_categoricas)
+
+    # Identificar las columnas numéricas en el DataFrame
+    columnas_numericas = X.select_dtypes(include=['number']).columns
+
+    # Iterar sobre cada columna categórica para generar interacciones
+    for columna_categorica in columnas_categoricas:
+        # Crear las columnas codificadas para la variable categórica actual
+        columnas_codificadas = pd.get_dummies(X[columna_categorica], prefix=columna_categorica)
+
+        # Iterar sobre cada columna numérica para calcular las interacciones
+        for columna_numerica in columnas_numericas:
+            # Multiplicar las columnas codificadas por la columna numérica
+            interacciones = columnas_codificadas.mul(X[columna_numerica], axis=0)
+
+            # Renombrar las columnas de las interacciones para reflejar las combinaciones
+            interacciones.columns = [f"{columna_codificada}*{columna_numerica}" for columna_codificada in columnas_codificadas.columns]
+
+            # Agregar las columnas de interacciones al DataFrame codificado
+            X_codificado = pd.concat([X_codificado, interacciones], axis=1)
+
+    # Retornar el DataFrame con las variables categóricas codificadas y las interacciones
+    return X_codificado
+
+
+def calcular_estimadores(X: pd.DataFrame, y: pd.Series, incluir_intercepto=True) -> pd.Series:
+    """
+    Calcula los estimadores de una regresión múltiple con OLS.
 
     :param X: DataFrame con las variables independientes.
     :type X: pd.DataFrame
