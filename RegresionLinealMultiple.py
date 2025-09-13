@@ -111,12 +111,12 @@ def calcular_estimadores(X: pd.DataFrame, y: pd.Series, incluir_intercepto=True)
         X_matrix = np.column_stack((np.ones(X_matrix.shape[0]), X_matrix))
 
     # Fórmula de OLS: (X^T X)^(-1) X^T y
-    betas = np.linalg.inv(X_matrix.T @ X_matrix) @ X_matrix.T @ y_vector
-    
-    return pd.Series(betas)
+    estimadores = np.linalg.inv(X_matrix.T @ X_matrix) @ X_matrix.T @ y_vector
+
+    return pd.Series(estimadores)
 
 
-def calcular_varianza(X: pd.DataFrame, Y: pd.Series, betas: pd.Series, incluir_intercepto=True, n=None, p=None) -> float:
+def calcular_varianza(X: pd.DataFrame, Y: pd.Series, estimadores: pd.Series, incluir_intercepto=True, n=None, p=None) -> float:
     """
     Calcula la varianza explicada y la varianza residual de un modelo de regresión.
 
@@ -124,8 +124,8 @@ def calcular_varianza(X: pd.DataFrame, Y: pd.Series, betas: pd.Series, incluir_i
     :type X: pd.DataFrame
     :param y: Serie o DataFrame con la variable dependiente (n x 1).
     :type y: pd.Series o pd.DataFrame
-    :param betas: Coeficientes estimados del modelo (p x 1).
-    :type betas: np.ndarray
+    :param estimadores: Coeficientes estimados del modelo (p x 1).
+    :type estimadores: np.ndarray
     :param incluir_intercepto: Si True, incluye el intercepto en el cálculo.
     :type incluir_intercepto: bool
     :param n: Número de observaciones. Si None, se calcula como el número de filas en X.
@@ -136,9 +136,9 @@ def calcular_varianza(X: pd.DataFrame, Y: pd.Series, betas: pd.Series, incluir_i
     :return: varianza
     :rtype: float
     """
-    # Convertir el DataFrame X y betas a matrices numpy
+    # Convertir el DataFrame X y estimadores a matrices numpy
     X_matrix = X.to_numpy()
-    betas = betas.to_numpy() 
+    estimadores = estimadores.to_numpy()
 
     # Agregar una columna de 1's a X si se desea incluir el intercepto en el modelo
     if incluir_intercepto:
@@ -153,14 +153,14 @@ def calcular_varianza(X: pd.DataFrame, Y: pd.Series, betas: pd.Series, incluir_i
         p = numero_parametros(X, incluir_intercepto)
 
     # Calcular la varianza residual usando la fórmula:
-    # varianza = (Y - X * betas)^T * (Y - X * betas) / (n - p)
-    sse = suma_cuadrada_error(Y, pd.Series(X_matrix @ betas))
+    # varianza = (Y - X * estimadores)^T * (Y - X * estimadores) / (n - p)
+    sse = suma_cuadrada_error(Y, pd.Series(X_matrix @ estimadores))
     varianza = media_cuadratica_error(sse, n, p)
 
     return varianza
 
 
-def matriz_covarianza_betas(X: pd.DataFrame, varianza: float) -> pd.DataFrame:
+def matriz_covarianza_estimadores(X: pd.DataFrame, varianza: float) -> pd.DataFrame:
     """
     Calcula la matriz de covarianza de un DataFrame.
 
@@ -174,8 +174,8 @@ def matriz_covarianza_betas(X: pd.DataFrame, varianza: float) -> pd.DataFrame:
     """
     # Convertir el DataFrame X a una matriz numpy
     X_matrix = X.to_numpy()
-    
-    # Calcular la matriz de covarianza de los coeficientes beta
+
+    # Calcular la matriz de covarianza de los coeficientes estimadores
     # Fórmula: varianza * (X^T X)^(-1)
     matriz_covarianza = varianza * np.linalg.inv(X_matrix.T @ X_matrix)
     
@@ -183,12 +183,12 @@ def matriz_covarianza_betas(X: pd.DataFrame, varianza: float) -> pd.DataFrame:
     return pd.DataFrame(matriz_covarianza)
 
 
-def prueba_significancia_individual(betas: pd.Series, matriz_covarianza: pd.DataFrame, n: int, p=None, nivel_significancia=0.05) -> pd.DataFrame:
+def prueba_significancia_individual(estimadores: pd.Series, matriz_covarianza: pd.DataFrame, n: int, p=None, nivel_significancia=0.05) -> pd.DataFrame:
     """
-    Realiza la prueba de significancia individual para cada coeficiente beta.
+    Realiza la prueba de significancia individual para cada coeficiente estimador.
 
-    :param betas: Coeficientes estimados del modelo (p x 1).
-    :type betas: pd.Series
+    :param estimadores: Coeficientes estimados del modelo (p x 1).
+    :type estimadores: pd.Series
     :param matriz_covarianza: Matriz de covarianza de los coeficientes (p x p).
     :type matriz_covarianza: pd.DataFrame
     :param n: Número de observaciones.
@@ -202,19 +202,19 @@ def prueba_significancia_individual(betas: pd.Series, matriz_covarianza: pd.Data
     # Crear un DataFrame para almacenar los resultados de la prueba
     resultados = pd.DataFrame(columns=["Estadístico de prueba", "Valor critico", "Rechazo H0", "P-Value", "Nivel de significancia"])
     
-    # Si no se proporciona el número de parámetros (p), se calcula como la longitud de los coeficientes beta
+    # Si no se proporciona el número de parámetros (p), se calcula como la longitud de los coeficientes estimadores
     if p is None:
-        p = len(betas)
+        p = len(estimadores)
     
     # Calcular el valor crítico t basado en el nivel de significancia y los grados de libertad
     valor_critico = t.ppf(1 - nivel_significancia / 2, df=(n - p)) # Es lo mismo que una distribucion F con 1 y n-p grados de libertad
 
-    # Iterar sobre cada coeficiente beta para realizar la prueba de significancia
-    for j in range(len(betas)):
-        # Calcular el estadístico de prueba t para el coeficiente beta j
-        estadistico_prueba = betas[j] / np.sqrt(matriz_covarianza[j, j])
-        
-        # Determinar si se rechaza la hipótesis nula (H0) para el coeficiente beta j
+    # Iterar sobre cada coeficiente estimador para realizar la prueba de significancia
+    for j in range(len(estimadores)):
+        # Calcular el estadístico de prueba t para el coeficiente estimador j
+        estadistico_prueba = estimadores[j] / np.sqrt(matriz_covarianza[j, j])
+
+        # Determinar si se rechaza la hipótesis nula (H0) para el coeficiente estimador j
         rechazo_h0 = abs(estadistico_prueba) > valor_critico
         
         # Calcular el p-valor asociado al estadístico t
@@ -227,12 +227,12 @@ def prueba_significancia_individual(betas: pd.Series, matriz_covarianza: pd.Data
     return resultados
 
 
-def intervalo_confianza(varianza: float, x_particular: pd.Series, betas: pd.Series, X: pd.DataFrame, incluir_intercepto=True, n=None, p=None, nivel_significancia=0.05) -> dict:
+def intervalo_confianza(varianza: float, x_particular: pd.Series, estimadores: pd.Series, X: pd.DataFrame, incluir_intercepto=True, n=None, p=None, nivel_significancia=0.05) -> dict:
     """
-    Calcula el intervalo de confianza para los coeficientes beta.
+    Calcula el intervalo de confianza para los coeficientes estimadores.
 
-    :param betas: Coeficientes del modelo (p x 1).
-    :type betas: pd.Series
+    :param estimadores: Coeficientes del modelo (p x 1).
+    :type estimadores: pd.Series
     :param matriz_covarianza: Matriz de covarianza de los coeficientes (p x p).
     :type matriz_covarianza: pd.DataFrame
     :param varianza: Varianza del modelo.
@@ -249,16 +249,16 @@ def intervalo_confianza(varianza: float, x_particular: pd.Series, betas: pd.Seri
     """
     # Convertir a matriz numpy
     X_matrix = X.to_numpy()
-    betas = betas.to_numpy()
+    estimadores = estimadores.to_numpy()
     x_particular = x_particular.to_numpy()
     
     # Agregar una columna de 1's a X si se desea incluir el intercepto en el modelo
     if incluir_intercepto:
         X_matrix = np.column_stack((np.ones(X_matrix.shape[0]), X_matrix))
-    
-    # Si no se proporciona el número de parámetros (p), se calcula como la longitud de los coeficientes beta
+
+    # Si no se proporciona el número de parámetros (p), se calcula como la longitud de los coeficientes estimadores
     if p is None:
-        p = len(betas)
+        p = len(estimadores)
 
     # Si no se proporciona el número de observaciones (n), se calcula como la longitud de X
     if n is None:
@@ -271,20 +271,20 @@ def intervalo_confianza(varianza: float, x_particular: pd.Series, betas: pd.Seri
     margen_error = valor_critico * np.sqrt(varianza * x_particular.T @ np.linalg.inv(X_matrix.T @ X_matrix) @ x_particular)
 
     # Calcular los límites del intervalo de predicción
-    limite_superior = (x_particular @ betas) + margen_error
-    limite_inferior = (x_particular @ betas) - margen_error
+    limite_superior = (x_particular @ estimadores) + margen_error
+    limite_inferior = (x_particular @ estimadores) - margen_error
 
     return {'Limite Inferior': limite_inferior, 'Limite Superior': limite_superior}
 
 
-def intervalo_prediccion(varianza: float, x_particular: pd.Series, betas: pd.Series, X: pd.DataFrame, incluir_intercepto=True, n=None, p=None, nivel_significancia=0.05) -> dict:
+def intervalo_prediccion(varianza: float, x_particular: pd.Series, estimadores: pd.Series, X: pd.DataFrame, incluir_intercepto=True, n=None, p=None, nivel_significancia=0.05) -> dict:
     """
     Calcula el intervalo de predicción para unos valores específicos.
 
     :param x_particular: Valores de las características para el nuevo punto.
     :type x_particular: pd.Series
-    :param betas: Coeficientes del modelo (p x 1).
-    :type betas: pd.Series
+    :param estimadores: Coeficientes del modelo (p x 1).
+    :type estimadores: pd.Series
     :param varianza: Varianza del modelo.
     :type varianza: float
     :param n: Número de observaciones.
@@ -305,10 +305,10 @@ def intervalo_prediccion(varianza: float, x_particular: pd.Series, betas: pd.Ser
     # Agregar una columna de 1's a X si se desea incluir el intercepto en el modelo
     if incluir_intercepto:
         X_matrix = np.column_stack((np.ones(X_matrix.shape[0]), X_matrix))
-    
-    # Si no se proporciona el número de parámetros (p), se calcula como la longitud de los coeficientes beta
+
+    # Si no se proporciona el número de parámetros (p), se calcula como la longitud de los coeficientes estimadores
     if p is None:
-        p = len(betas)
+        p = len(estimadores)
 
     # Si no se proporciona el número de observaciones (n), se calcula como la longitud de X
     if n is None:
@@ -321,8 +321,8 @@ def intervalo_prediccion(varianza: float, x_particular: pd.Series, betas: pd.Ser
     margen_error = valor_critico * np.sqrt(varianza * x_particular.T @ np.linalg.inv(X_matrix.T @ X_matrix) @ x_particular + varianza)
 
     # Calcular los límites del intervalo de predicción
-    limite_superior = (x_particular @ betas) + margen_error
-    limite_inferior = (x_particular @ betas) - margen_error
+    limite_superior = (x_particular @ estimadores) + margen_error
+    limite_inferior = (x_particular @ estimadores) - margen_error
 
     return {'Limite Inferior': limite_inferior, 'Limite Superior': limite_superior}
 
