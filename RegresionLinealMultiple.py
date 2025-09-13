@@ -112,8 +112,10 @@ def calcular_estimadores(X: pd.DataFrame, y: pd.Series, incluir_intercepto=True)
 
     # Fórmula de OLS: (X^T X)^(-1) X^T y
     estimadores = np.linalg.inv(X_matrix.T @ X_matrix) @ X_matrix.T @ y_vector
+    
+    nombres = (['intercepto'] if incluir_intercepto else []) + list(X.columns)
 
-    return pd.Series(estimadores)
+    return pd.Series(estimadores.ravel(), index=nombres)
 
 
 def calcular_varianza(X: pd.DataFrame, Y: pd.Series, estimadores: pd.Series, incluir_intercepto=True, n=None, p=None) -> float:
@@ -154,7 +156,9 @@ def calcular_varianza(X: pd.DataFrame, Y: pd.Series, estimadores: pd.Series, inc
 
     # Calcular la varianza residual usando la fórmula:
     # varianza = (Y - X * estimadores)^T * (Y - X * estimadores) / (n - p)
-    sse = suma_cuadrada_error(Y, pd.Series(X_matrix @ estimadores))
+    Y_pred = pd.Series(X_matrix @ estimadores)
+    # Calcular la suma de cuadrados del error (SSE)
+    sse = suma_cuadrada_error(Y, Y_pred)
     varianza = media_cuadratica_error(sse, n, p)
 
     return varianza
@@ -183,14 +187,14 @@ def matriz_covarianza_estimadores(X: pd.DataFrame, varianza: float) -> pd.DataFr
     return pd.DataFrame(matriz_covarianza)
 
 
-def prueba_significancia_individual(estimadores: pd.Series, matriz_covarianza: pd.DataFrame, n: int, p=None, nivel_significancia=0.05) -> pd.DataFrame:
+def prueba_significancia_individual(estimadores: pd.Series, matriz_covarianza_estimadores: pd.DataFrame, n: int, p=None, nivel_significancia=0.05) -> pd.DataFrame:
     """
     Realiza la prueba de significancia individual para cada coeficiente estimador.
 
     :param estimadores: Coeficientes estimados del modelo (p x 1).
     :type estimadores: pd.Series
-    :param matriz_covarianza: Matriz de covarianza de los coeficientes (p x p).
-    :type matriz_covarianza: pd.DataFrame
+    :param matriz_covarianza_estimadores: Matriz de covarianza de los coeficientes (p x p).
+    :type matriz_covarianza_estimadores: pd.DataFrame
     :param n: Número de observaciones.
     :type n: int
     :param nivel_significancia: Nivel de significancia para la prueba.
@@ -199,6 +203,9 @@ def prueba_significancia_individual(estimadores: pd.Series, matriz_covarianza: p
     :return: Estadísticos t y p-valores para cada coeficiente.
     :rtype: pd.DataFrame
     """
+    matriz_covarianza_estimadores = matriz_covarianza_estimadores.to_numpy()
+    estimadores = estimadores.to_numpy()
+    
     # Crear un DataFrame para almacenar los resultados de la prueba
     resultados = pd.DataFrame(columns=["Estadístico de prueba", "Valor critico", "Rechazo H0", "P-Value", "Nivel de significancia"])
     
@@ -212,7 +219,7 @@ def prueba_significancia_individual(estimadores: pd.Series, matriz_covarianza: p
     # Iterar sobre cada coeficiente estimador para realizar la prueba de significancia
     for j in range(len(estimadores)):
         # Calcular el estadístico de prueba t para el coeficiente estimador j
-        estadistico_prueba = estimadores[j] / np.sqrt(matriz_covarianza[j, j])
+        estadistico_prueba = estimadores[j] / np.sqrt(matriz_covarianza_estimadores[j, j])
 
         # Determinar si se rechaza la hipótesis nula (H0) para el coeficiente estimador j
         rechazo_h0 = abs(estadistico_prueba) > valor_critico
